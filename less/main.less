@@ -1,0 +1,62 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Tahoma";
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+ul,
+li,
+a,
+div,
+p {
+  margin: 0;
+  padding: 0;
+  font-family: "Tahoma";
+  font-size: 14px;
+  color: #000000;
+  font-weight: 400;
+  list-style: none;
+  text-decoration: none;
+  box-shadow: none;
+  border: none;
+}
+body {
+  height: 100%;
+  width: 100%;
+  // overflow: hidden;
+
+  #tableWrapper {
+    margin: 0 auto;
+    width: 700px;
+    height: 100vh;
+    box-sizing: border-box;
+    overflow: scroll;
+
+    .canvasForTableInTableWrapper {
+      background-color: azure;
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      position: relative;
+
+      .row {
+        box-sizing: border-box;
+        position: absolute;
+        .cell {
+          position: absolute;
+          box-sizing: border-box;
+          height: 24px;
+          width: 70px;
+          border: 1px solid #807f7f;
+          text-align: center;
+        }
+      }
+    }
+  }
+}
