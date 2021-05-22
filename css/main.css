@@ -30,6 +30,13 @@ body {
   height: 100%;
   width: 100%;
 }
+body img {
+  width: 100px;
+  height: 100px;
+  margin: auto;
+  display: block;
+  margin-bottom: 10px;
+}
 body #tableWrapper {
   margin: 0 auto;
   width: 700px;
@@ -43,6 +50,7 @@ body #tableWrapper .canvasForTableInTableWrapper {
   width: 100%;
   height: 100%;
   position: relative;
+  transform: translateX();
 }
 body #tableWrapper .canvasForTableInTableWrapper .row {
   box-sizing: border-box;

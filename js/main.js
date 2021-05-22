@@ -1,9 +1,32 @@
+// Проверка того, что наш браузер поддерживает Service Worker API.
+if ("serviceWorker" in navigator) {
+  // Весь код регистрации у нас асинхронный.
+
+  navigator.serviceWorker
+    .register("/js/sw.js")
+    .then(function (registration) {
+      console.log("Service Worker Registration", registration);
+    })
+    .catch(function (err) {
+      console.log("Service Worker Failed to Register", err);
+    });
+}
+
 class MyLib {
   constructor(options) {
+    this.rowsTopAndBottom = options.rowsTopAndBottom;
+    this.cellsLeftAndRight = options.cellsLeftAndRight;
     this.tableWrapper = options.elem;
     this.data = options.data || this.makeData();
     this.rowHeight = options.height;
     this.cellWidth = options.width;
+    this.tableWrapperScrollTop;
+    this.tableWrapperScrollLeft;
+    this.x1 = 0;
+    this.y1 = 0;
+    this.x = 0;
+    this.y = 0;
+    this.isSlideModeOn = false;
 
     this.canvasForTableInTableWrapper = this.tableWrapper.ownerDocument.createElement(
       "div"
@@ -12,24 +35,19 @@ class MyLib {
     this.makingCanvasForTableInTableWrapper();
 
     this.canvasForTableInTableWrapper.addEventListener("mousedown", (e) => {
+      this.isSlideModeOn = true;
       this.mouseDown(e);
     });
-
-    this.canvasForTableInTableWrapper.addEventListener("mouseup", (e) => {});
+    this.canvasForTableInTableWrapper.addEventListener("mouseup", (e) => {
+      this.isSlideModeOn = false;
+      this.mouseUp(e);
+    });
     this.canvasForTableInTableWrapper.addEventListener("mousemove", (e) => {
       this.mouseMove(e);
     });
-
-    this.x1 = 0;
-    this.y1 = 0;
-    this.x2 = 0;
-    this.y2 = 0;
-    this.x = 0;
-    this.y = 0;
-    this.scrollModeOn = false;
     this.tableWrapper.addEventListener("scroll", this.test, false);
+
     this.refreshWindow();
-    // debugger;
   }
 
   makeData() {
@@ -56,74 +74,54 @@ class MyLib {
   }
 
   mouseDown = (e) => {
-    this.scrollModeOn = true;
-    const xInCell = e.offsetX;
-    const yInCell = e.offsetY;
-
-    const xInWrap = parseFloat(e.path[0].style.left);
-    const yInWrap = parseFloat(e.path[1].style.top);
-
-    this.x1 = xInCell + xInWrap;
-    this.y1 = yInCell + yInWrap;
-    console.log("x1", this.x1);
-    console.log("y1", this.y1);
+    this.x = 0;
+    this.y = 0;
+    this.x1 = e.pageX;
+    this.y1 = e.pageY;
+    this.tableWrapperScrollTop = this.tableWrapper.scrollTop;
+    this.tableWrapperScrollLeft = this.tableWrapper.scrollLeft;
+    // console.log("x1", this.x1);
+    // console.log("y1", this.y1);
   };
 
   mouseMove = (e) => {
-    if (this.scrollModeOn) {
-      const xInCell = e.offsetX;
-      const yInCell = e.offsetY;
+    if (this.isSlideModeOn) {
+      const x2 = e.pageX;
+      const y2 = e.pageY;
+      this.x = x2 - this.x1;
+      this.y = y2 - this.y1;
 
-      const xInWrap = parseFloat(e.path[0].style.left);
-      const yInWrap = parseFloat(e.path[1].style.top);
-
-      this.x2 = xInCell + xInWrap;
-      this.y2 = yInCell + yInWrap;
-      console.log("this.x2 - this.x1", this.x2 - this.x1);
-      console.log("this.y2 - this.y1", this.y2 - this.y1);
-      tableWrapper.scrollTop = this.x2 - this.x1;
-      tableWrapper.scrollLeft = this.y2 - this.y1;
-      this.refreshWindow();
+      this.canvasForTableInTableWrapper.style.transform =
+        "translate(" + this.x + "px, " + this.y + "px)";
     }
-    this.scrollModeOn = false;
+  };
+  mouseUp = () => {
+    this.canvasForTableInTableWrapper.style.transform = "translate(0px, 0px)";
+    this.tableWrapper.scrollTop = this.tableWrapperScrollTop - this.y;
+    this.tableWrapper.scrollLeft = this.tableWrapperScrollLeft - this.x;
+    // this.refreshWindow;
   };
 
-  mouseMove = (e) => {
-    if (this.scrollModeOn) {
-      const xInCell = e.offsetX;
-      const yInCell = e.offsetY;
-
-      const xInWrap = parseFloat(e.path[0].style.left);
-      const yInWrap = parseFloat(e.path[1].style.top);
-
-      this.x2 = xInCell + xInWrap;
-      this.y2 = yInCell + yInWrap;
-      console.log(this.x2 - this.x1);
-      console.log(this.y2 - this.y1);
-      tableWrapper.scrollTop = this.x2 - this.x1;
-      tableWrapper.scrollLeft = this.y2 - this.y1;
+  refreshWindow = () => {
+    if (this.isSlideModeOn) {
+      return;
     }
-    this.scrollModeOn = false;
-  };
-
-  refreshWindow = function () {
-    console.log("refreshWindow");
+    console.log("refreshwindow");
     let firstRow = Math.floor(
-      this.tableWrapper.scrollTop / this.rowHeight - 40
+      this.tableWrapper.scrollTop / this.rowHeight - this.rowsTopAndBottom
     );
     let lastRow =
       firstRow +
       Math.ceil(this.tableWrapper.offsetHeight / this.rowHeight) +
-      80;
+      this.rowsTopAndBottom * 2;
 
     let firstCell = Math.floor(
-      this.tableWrapper.scrollLeft / this.cellWidth - 20
+      this.tableWrapper.scrollLeft / this.cellWidth - this.cellsLeftAndRight
     );
     let lastCell =
       firstCell +
       Math.ceil(this.tableWrapper.offsetHeight / this.cellWidth) +
-      40;
-    // debugger;
+      this.cellsLeftAndRight * 2;
 
     if (firstRow < 0) {
       firstRow = 0;
@@ -140,26 +138,51 @@ class MyLib {
 
     this.canvasForTableInTableWrapper.innerHTML = "";
 
-    const frag = document.createDocumentFragment();
-
+    console.time("render table");
+    // const frag = document.createDocumentFragment();
+    let row,
+      rows = "";
     for (let i = firstRow; i < lastRow; i++) {
-      let row;
-      row = this.tableWrapper.ownerDocument.createElement("div");
-      row.className = "row";
-      row.style.top = i * this.rowHeight + "px";
-
+      let cells = "";
       for (let j = firstCell; j < lastCell; j++) {
-        let cell = this.tableWrapper.ownerDocument.createElement("div");
-        cell.className = "cell";
-        cell.style.left = j * this.cellWidth + "px";
-        // debugger;
-        cell.innerHTML = this.data[i][j];
-
-        row.appendChild(cell);
+        let cell = `<div class="cell" style="left: ${j * this.cellWidth}px">${
+          this.data[i][j]
+        }</div>`;
+        cells += cell;
       }
-      frag.appendChild(row);
+      row = `<div class="row" style="top: ${
+        i * this.rowHeight
+      }px">${cells}</div>`;
+      rows += row;
     }
-    this.canvasForTableInTableWrapper.appendChild(frag);
+
+    // for (let i = firstRow; i < lastRow; i++) {
+    //   let row;
+    //   row = this.tableWrapper.ownerDocument.createElement("div");
+    //   row.className = "row";
+    //   row.style.top = i * this.rowHeight + "px";
+
+    //   for (let j = firstCell; j < lastCell; j++) {
+    //     let cell = this.tableWrapper.ownerDocument.createElement("div");
+    //     cell.className = "cell";
+    //     cell.style.left = j * this.cellWidth + "px";
+    //     cell.innerHTML = this.data[i][j];
+
+    //     row.appendChild(cell);
+    //   }
+    //   for (let j = firstCell; j < lastCell; j++) {
+    //     let cell = this.tableWrapper.ownerDocument.createElement("div");
+    //     cell.className = "cell";
+    //     cell.style.left = j * this.cellWidth + "px";
+    //     cell.innerHTML = this.data[i][j];
+
+    //     row.appendChild(cell);
+    //   }
+    //   frag.appendChild(row);
+    // }
+    // this.canvasForTableInTableWrapper.appendChild(frag);
+    this.canvasForTableInTableWrapper.innerHTML = rows;
+    console.timeEnd("render table");
   };
 
   throttle(func, ms) {
@@ -192,7 +215,7 @@ class MyLib {
     return wrapper;
   }
 
-  test = this.throttle(this.refreshWindow, 150).bind(this);
+  test = this.throttle(this.refreshWindow, 400).bind(this);
 }
 
 new MyLib({
@@ -200,4 +223,6 @@ new MyLib({
   data: null,
   width: 70,
   height: 24,
+  rowsTopAndBottom: 30,
+  cellsLeftAndRight: 10,
 });
